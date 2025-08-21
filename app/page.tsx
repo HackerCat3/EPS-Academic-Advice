@@ -1,5 +1,3 @@
-"use client"
-
 import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/app-shell"
 import { ThreadList } from "@/components/thread-list"
@@ -15,42 +13,11 @@ interface PageProps {
 
 export default async function HomePage({ searchParams }: PageProps) {
   const { q: searchQuery } = await searchParams
+  const supabase = await createClient()
 
-  let supabase
-  let user = null
-  let authError = false
-
-  try {
-    supabase = await createClient()
-    const { data, error } = await supabase.auth.getUser()
-    if (error) {
-      console.error("[v0] Auth error:", error)
-      authError = true
-    } else {
-      user = data.user
-    }
-  } catch (error) {
-    console.error("[v0] Supabase client error:", error)
-    authError = true
-  }
-
-  if (authError) {
-    return (
-      <div className="min-h-screen bg-[#F2F7FF] flex items-center justify-center p-6">
-        <div className="text-center space-y-6 max-w-md">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-serif font-bold text-[#10316B]">EPS Academic Advice</h1>
-            <p className="text-muted-foreground">
-              Unable to connect to the authentication service. Please check your connection and try again.
-            </p>
-          </div>
-          <Button onClick={() => window.location.reload()} className="w-full bg-[#10316B] hover:bg-[#10316B]/90">
-            Retry Connection
-          </Button>
-        </div>
-      </div>
-    )
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   if (!user) {
     return (
@@ -73,13 +40,7 @@ export default async function HomePage({ searchParams }: PageProps) {
     )
   }
 
-  let profile = null
-  try {
-    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-    profile = data
-  } catch (error) {
-    console.error("[v0] Profile fetch error:", error)
-  }
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
 
   if (!profile) {
     return (
