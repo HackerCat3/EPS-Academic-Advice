@@ -1,4 +1,5 @@
-import { redirect } from "next/navigation"
+"use client"
+
 import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/app-shell"
 import { ThreadList } from "@/components/thread-list"
@@ -14,22 +15,84 @@ interface PageProps {
 
 export default async function HomePage({ searchParams }: PageProps) {
   const { q: searchQuery } = await searchParams
-  const supabase = await createClient()
 
-  // Get user and profile
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser()
+  let supabase
+  let user = null
+  let authError = false
 
-  if (userError || !user) {
-    redirect("/auth/login")
+  try {
+    supabase = await createClient()
+    const { data, error } = await supabase.auth.getUser()
+    if (error) {
+      console.error("[v0] Auth error:", error)
+      authError = true
+    } else {
+      user = data.user
+    }
+  } catch (error) {
+    console.error("[v0] Supabase client error:", error)
+    authError = true
   }
 
-  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+  if (authError) {
+    return (
+      <div className="min-h-screen bg-[#F2F7FF] flex items-center justify-center p-6">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-serif font-bold text-[#10316B]">EPS Academic Advice</h1>
+            <p className="text-muted-foreground">
+              Unable to connect to the authentication service. Please check your connection and try again.
+            </p>
+          </div>
+          <Button onClick={() => window.location.reload()} className="w-full bg-[#10316B] hover:bg-[#10316B]/90">
+            Retry Connection
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#F2F7FF] flex items-center justify-center p-6">
+        <div className="text-center space-y-6 max-w-md">
+          <div className="space-y-2">
+            <h1 className="text-3xl font-serif font-bold text-[#10316B]">EPS Academic Advice</h1>
+            <p className="text-muted-foreground">Please sign in to access the academic discussion platform</p>
+          </div>
+          <div className="space-y-3">
+            <Button asChild className="w-full bg-[#10316B] hover:bg-[#10316B]/90">
+              <Link href="/auth/login">Sign In</Link>
+            </Button>
+            <Button asChild variant="outline" className="w-full bg-transparent">
+              <Link href="/auth/sign-up">Create Account</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  let profile = null
+  try {
+    const { data } = await supabase.from("profiles").select("*").eq("id", user.id).single()
+    profile = data
+  } catch (error) {
+    console.error("[v0] Profile fetch error:", error)
+  }
 
   if (!profile) {
-    redirect("/auth/login")
+    return (
+      <div className="min-h-screen bg-[#F2F7FF] flex items-center justify-center p-6">
+        <div className="text-center space-y-4 max-w-md">
+          <h2 className="text-xl font-serif font-bold text-[#10316B]">Profile Not Found</h2>
+          <p className="text-muted-foreground">There was an issue loading your profile. Please try signing in again.</p>
+          <Button asChild className="bg-[#10316B] hover:bg-[#10316B]/90">
+            <Link href="/auth/login">Sign In Again</Link>
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   // Build query for threads

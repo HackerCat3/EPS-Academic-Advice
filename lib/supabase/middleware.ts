@@ -25,31 +25,56 @@ export async function updateSession(request: NextRequest) {
     },
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
 
-  // Domain enforcement for @eastsideprep.org
-  if (user && !user.email?.endsWith("@eastsideprep.org")) {
-    await supabase.auth.signOut()
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/unauthorized"
-    return NextResponse.redirect(url)
+    // Domain enforcement for @eastsideprep.org
+    if (user && !user.email?.endsWith("@eastsideprep.org")) {
+      await supabase.auth.signOut()
+      const url = request.nextUrl.clone()
+      url.pathname = "/auth/unauthorized"
+      return NextResponse.redirect(url)
+    }
+
+    // Redirect authenticated users away from auth pages
+    if (
+      user &&
+      (request.nextUrl.pathname.startsWith("/auth/login") || request.nextUrl.pathname.startsWith("/auth/sign-up"))
+    ) {
+      const url = request.nextUrl.clone()
+      url.pathname = "/"
+      return NextResponse.redirect(url)
+    }
+
+    // Protect teacher/admin routes
+    if (request.nextUrl.pathname.startsWith("/teachers") || request.nextUrl.pathname.startsWith("/moderation")) {
+      if (!user) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/auth/login"
+        return NextResponse.redirect(url)
+      }
+
+      // Check user role for protected routes
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single()
+
+      if (request.nextUrl.pathname.startsWith("/teachers") && profile?.role === "student") {
+        const url = request.nextUrl.clone()
+        url.pathname = "/"
+        return NextResponse.redirect(url)
+      }
+
+      if (request.nextUrl.pathname.startsWith("/moderation") && !["teacher", "admin"].includes(profile?.role || "")) {
+        const url = request.nextUrl.clone()
+        url.pathname = "/"
+        return NextResponse.redirect(url)
+      }
+    }
+
+    return supabaseResponse
+  } catch (error) {
+    console.error("Middleware auth error:", error)
+    return supabaseResponse
   }
-
-  // Redirect unauthenticated users to login
-  if (!user && !request.nextUrl.pathname.startsWith("/auth") && request.nextUrl.pathname !== "/") {
-    const url = request.nextUrl.clone()
-    url.pathname = "/auth/login"
-    return NextResponse.redirect(url)
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (user && request.nextUrl.pathname.startsWith("/auth/login")) {
-    const url = request.nextUrl.clone()
-    url.pathname = "/"
-    return NextResponse.redirect(url)
-  }
-
-  return supabaseResponse
 }
