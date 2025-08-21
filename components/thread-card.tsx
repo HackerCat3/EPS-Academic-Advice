@@ -2,7 +2,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Lock, Unlock, Eye, MessageSquare } from "lucide-react"
+import { Lock, Unlock, Eye, MessageSquare, Paperclip } from 'lucide-react'
 import Link from "next/link"
 import { formatDistanceToNow } from "date-fns"
 
@@ -15,6 +15,8 @@ interface ThreadCardProps {
     visibility: "public" | "teachers_only"
     status: "open" | "locked"
     created_at: string
+    category?: string
+    attachments?: any[]
     author?: {
       full_name: string
     }
@@ -31,6 +33,16 @@ export function ThreadCard({ thread, currentUserRole, onLock, onUnlock }: Thread
 
   const excerpt = thread.body.length > 150 ? `${thread.body.substring(0, 150)}...` : thread.body
 
+  const getCategoryLabel = (category?: string) => {
+    const categoryLabels: Record<string, string> = {
+      'collaboration': 'Academic Collaboration',
+      'review': 'Student Questions Review',
+      'policy': 'Policy Discussions',
+      'announcements': 'Announcements'
+    }
+    return categoryLabels[category || 'collaboration'] || 'Discussion'
+  }
+
   return (
     <Card className="bg-white shadow-sm hover:shadow-md transition-shadow">
       <CardHeader className="pb-3">
@@ -45,6 +57,12 @@ export function ThreadCard({ thread, currentUserRole, onLock, onUnlock }: Thread
               <span>by {authorName}</span>
               <span>•</span>
               <span>{formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}</span>
+              {thread.visibility === "teachers_only" && thread.category && (
+                <>
+                  <span>•</span>
+                  <span className="text-xs">{getCategoryLabel(thread.category)}</span>
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -69,6 +87,12 @@ export function ThreadCard({ thread, currentUserRole, onLock, onUnlock }: Thread
               <MessageSquare className="h-4 w-4" />
               <span>{thread.reply_count || 0} replies</span>
             </div>
+            {thread.attachments && thread.attachments.length > 0 && (
+              <div className="flex items-center gap-1">
+                <Paperclip className="h-4 w-4" />
+                <span>{thread.attachments.length} file{thread.attachments.length !== 1 ? 's' : ''}</span>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Button asChild variant="outline" size="sm">

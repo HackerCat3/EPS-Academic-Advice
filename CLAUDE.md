@@ -34,7 +34,7 @@ Execute these scripts in Supabase SQL editor in order.
 
 ### Project Structure
 
-```
+\`\`\`
 /app/                    # Next.js 15 App Router pages
 ├── api/                 # API routes for backend operations
 │   ├── moderation/      # Content moderation endpoints
@@ -60,7 +60,7 @@ Execute these scripts in Supabase SQL editor in order.
 └── utils.ts             # General utilities
 
 /scripts/                # Database migration scripts
-```
+\`\`\`
 
 ### Database Schema
 

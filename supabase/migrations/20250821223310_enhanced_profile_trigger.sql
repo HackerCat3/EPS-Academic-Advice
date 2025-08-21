@@ -1,5 +1,4 @@
-
-  -- Enhanced trigger to handle existing users
+-- Enhanced trigger to handle existing users
   CREATE OR REPLACE FUNCTION public.handle_new_user()
   RETURNS TRIGGER
   LANGUAGE plpgsql

@@ -4,16 +4,17 @@ import { AppShell } from "@/components/app-shell"
 import { ThreadList } from "@/components/thread-list"
 import { Banner } from "@/components/banner"
 import { EmptyState } from "@/components/empty-state"
+import { TeachersSidebar } from "@/components/teachers-sidebar"
 import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { Plus } from 'lucide-react'
 import Link from "next/link"
 
 interface PageProps {
-  searchParams: Promise<{ q?: string }>
+  searchParams: Promise<{ q?: string; category?: string }>
 }
 
 export default async function TeachersLoungePage({ searchParams }: PageProps) {
-  const { q: searchQuery } = await searchParams
+  const { q: searchQuery, category } = await searchParams
   const supabase = await createClient()
 
   // Get user and profile
@@ -37,7 +38,34 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
     redirect("/")
   }
 
-  // Build query for teachers-only threads
+  const { data: categoryCounts } = await supabase
+    .from("threads")
+    .select("category")
+    .eq("visibility", "teachers_only")
+    .eq("is_pending", false)
+
+  const categoryCountsFormatted = categoryCounts?.reduce((acc: any[], thread) => {
+    const existing = acc.find(c => c.category === thread.category)
+    if (existing) {
+      existing.count++
+    } else {
+      acc.push({ category: thread.category || 'collaboration', count: 1 })
+    }
+    return acc
+  }, []) || []
+
+  const { count: pendingCount } = await supabase
+    .from("threads")
+    .select("*", { count: "exact", head: true })
+    .eq("is_pending", true)
+
+  const { count: pendingRepliesCount } = await supabase
+    .from("replies")
+    .select("*", { count: "exact", head: true })
+    .eq("is_pending", true)
+
+  const totalPendingCount = (pendingCount || 0) + (pendingRepliesCount || 0)
+
   let threadsQuery = supabase
     .from("threads")
     .select(
@@ -52,6 +80,11 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
     .order("created_at", { ascending: false })
     .limit(20)
 
+  // Apply category filter
+  if (category && category !== 'all') {
+    threadsQuery = threadsQuery.eq("category", category)
+  }
+
   // Apply search filter if query exists
   if (searchQuery?.trim()) {
     threadsQuery = threadsQuery.textSearch("title,body", searchQuery.trim())
@@ -65,6 +98,17 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
   }))
 
   const isSearching = Boolean(searchQuery?.trim())
+  const isFiltering = Boolean(category && category !== 'all')
+
+  const getCategoryDisplayName = (cat: string) => {
+    const categoryNames: Record<string, string> = {
+      'collaboration': 'Academic Collaboration',
+      'review': 'Student Questions Review', 
+      'policy': 'Policy Discussions',
+      'announcements': 'Announcements'
+    }
+    return categoryNames[cat] || 'All Discussions'
+  }
 
   return (
     <AppShell user={profile}>
@@ -76,42 +120,64 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
           </div>
         </Banner>
 
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-serif font-bold text-[#10316B]">
-              {isSearching ? "Faculty Search Results" : "Private Faculty Discussions"}
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              {isSearching
-                ? `Found ${threadsWithCounts?.length || 0} results for "${searchQuery}"`
-                : "A confidential space for academic collaboration and professional discourse"}
-            </p>
-          </div>
-          <Button asChild className="bg-[#10316B] hover:bg-[#10316B]/90">
-            <Link href="/teachers/threads/new">
-              <Plus className="h-4 w-4 mr-2" />
-              Submit an Academic Inquiry
-            </Link>
-          </Button>
-        </div>
-
-        {/* Results */}
-        {!threadsWithCounts || threadsWithCounts.length === 0 ? (
-          <EmptyState
-            title={isSearching ? "No results found" : "No faculty discussions yet"}
-            message={
-              isSearching
-                ? `No faculty discussions match your search for "${searchQuery}". Try different keywords or browse all discussions.`
-                : "No threads have been initiated in the Teachers' Lounge."
-            }
-            actionLabel={isSearching ? undefined : "Submit an Academic Inquiry"}
-            actionHref={isSearching ? undefined : "/teachers/threads/new"}
-            showSearch={isSearching}
+        <div className="flex gap-6">
+          {/* Sidebar */}
+          <TeachersSidebar 
+            categoryCounts={categoryCountsFormatted}
+            pendingCount={totalPendingCount}
+            userRole={profile.role}
           />
-        ) : (
-          <ThreadList threads={threadsWithCounts} currentUserRole={profile.role} />
-        )}
+
+          {/* Main Content */}
+          <div className="flex-1 space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-serif font-bold text-[#10316B]">
+                  {isSearching 
+                    ? "Faculty Search Results" 
+                    : isFiltering 
+                      ? getCategoryDisplayName(category!)
+                      : "Private Faculty Discussions"
+                  }
+                </h1>
+                <p className="text-muted-foreground mt-1">
+                  {isSearching
+                    ? `Found ${threadsWithCounts?.length || 0} results for "${searchQuery}"`
+                    : isFiltering
+                      ? `Discussions in ${getCategoryDisplayName(category!).toLowerCase()}`
+                      : "A confidential space for academic collaboration and professional discourse"
+                  }
+                </p>
+              </div>
+              <Button asChild className="bg-[#10316B] hover:bg-[#10316B]/90">
+                <Link href="/teachers/threads/new">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Submit an Academic Inquiry
+                </Link>
+              </Button>
+            </div>
+
+            {/* Results */}
+            {!threadsWithCounts || threadsWithCounts.length === 0 ? (
+              <EmptyState
+                title={isSearching ? "No results found" : isFiltering ? `No ${getCategoryDisplayName(category!).toLowerCase()} yet` : "No faculty discussions yet"}
+                message={
+                  isSearching
+                    ? `No faculty discussions match your search for "${searchQuery}". Try different keywords or browse all discussions.`
+                    : isFiltering
+                      ? `No discussions have been started in ${getCategoryDisplayName(category!).toLowerCase()} yet.`
+                      : "No threads have been initiated in the Teachers' Lounge."
+                }
+                actionLabel={isSearching ? undefined : "Submit an Academic Inquiry"}
+                actionHref={isSearching ? undefined : "/teachers/threads/new"}
+                showSearch={isSearching}
+              />
+            ) : (
+              <ThreadList threads={threadsWithCounts} currentUserRole={profile.role} />
+            )}
+          </div>
+        </div>
       </div>
     </AppShell>
   )

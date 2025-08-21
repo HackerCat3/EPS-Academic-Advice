@@ -29,37 +29,48 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The submitted data is incomplete or invalid." }, { status: 400 })
     }
 
-    // Delete the rejected item
-    const tableName = target_type === "thread" ? "threads" : "replies"
-    const { error: deleteError } = await supabase.from(tableName).delete().eq("id", target_id)
+    // For admins, allow direct rejection
+    if (profile.role === "admin") {
+      // Delete the rejected item
+      const tableName = target_type === "thread" ? "threads" : "replies"
+      const { error: deleteError } = await supabase.from(tableName).delete().eq("id", target_id)
 
-    if (deleteError) {
-      console.error("Rejection error:", deleteError)
-      return NextResponse.json({ error: "Failed to reject item." }, { status: 500 })
+      if (deleteError) {
+        console.error("Rejection error:", deleteError)
+        return NextResponse.json({ error: "Failed to reject item." }, { status: 500 })
+      }
+
+      // Resolve any associated flags
+      await supabase
+        .from("flags")
+        .update({
+          resolved_by: user.id,
+          resolution: "rejected",
+          resolved_at: new Date().toISOString(),
+        })
+        .eq("target_type", target_type)
+        .eq("target_id", target_id)
+        .is("resolution", null)
+
+      // Log moderation action
+      await supabase.from("moderation_events").insert({
+        actor_id: user.id,
+        action: "reject",
+        target_type,
+        target_id,
+        reason,
+      })
+
+      return NextResponse.json({ success: true })
     }
 
-    // Resolve any associated flags
-    await supabase
-      .from("flags")
-      .update({
-        resolved_by: user.id,
-        resolution: "rejected",
-        resolved_at: new Date().toISOString(),
-      })
-      .eq("target_type", target_type)
-      .eq("target_id", target_id)
-      .is("resolution", null)
-
-    // Log moderation action
-    await supabase.from("moderation_events").insert({
-      actor_id: user.id,
-      action: "reject",
-      target_type,
-      target_id,
-      reason,
-    })
-
-    return NextResponse.json({ success: true })
+    // For teachers, redirect to voting system
+    return NextResponse.json(
+      {
+        error: "Teachers must use the voting system. Please cast your vote instead of direct rejection.",
+      },
+      { status: 400 },
+    )
   } catch (error) {
     console.error("API error:", error)
     return NextResponse.json({ error: "An unexpected error occurred." }, { status: 500 })

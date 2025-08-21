@@ -1,13 +1,13 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-
 import type React from "react"
-
 import { AppShell } from "@/components/app-shell"
 import { Banner } from "@/components/banner"
+import { FileUpload } from "@/components/file-upload"
+import { RichTextEditor } from "@/components/rich-text-editor"
 import { createClient } from "@/lib/supabase/client"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function NewTeachersThreadPage() {
@@ -15,6 +15,8 @@ export default function NewTeachersThreadPage() {
   const [profile, setProfile] = useState<any>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const defaultCategory = searchParams.get('category') || 'collaboration'
 
   useEffect(() => {
     const getUser = async () => {
@@ -53,6 +55,8 @@ export default function NewTeachersThreadPage() {
     body: string
     isAnonymous: boolean
     visibility: "public" | "teachers_only"
+    category: string
+    attachments: any[]
   }) => {
     setIsLoading(true)
 
@@ -110,34 +114,86 @@ export default function NewTeachersThreadPage() {
             </p>
           </div>
 
-          {/* Custom Thread Composer for Teachers */}
-          <TeachersThreadComposer onSubmit={handleSubmit} isLoading={isLoading} userRole={profile.role} />
+          <TeachersThreadComposer 
+            onSubmit={handleSubmit} 
+            isLoading={isLoading} 
+            userRole={profile.role}
+            defaultCategory={defaultCategory}
+          />
         </div>
       </div>
     </AppShell>
   )
 }
 
-// Custom component that forces teachers_only visibility
 function TeachersThreadComposer({
   onSubmit,
   isLoading,
   userRole,
+  defaultCategory = 'collaboration'
 }: {
   onSubmit: (data: {
     title: string
     body: string
     isAnonymous: boolean
     visibility: "public" | "teachers_only"
+    category: string
+    attachments: any[]
   }) => Promise<{ success: boolean; pending?: boolean; error?: string }>
   isLoading?: boolean
   userRole?: string
+  defaultCategory?: string
 }) {
   const [title, setTitle] = useState("")
   const [body, setBody] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)
+  const [category, setCategory] = useState(defaultCategory)
+  const [attachments, setAttachments] = useState<any[]>([])
+  const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
+  const [isUploading, setIsUploading] = useState(false)
+
+  const categories = [
+    { value: 'collaboration', label: 'Academic Collaboration', description: 'Teaching methods and resources' },
+    { value: 'review', label: 'Student Questions Review', description: 'Flagged and removed posts' },
+    { value: 'policy', label: 'Policy Discussions', description: 'School policies and moderation rules' },
+    ...(userRole === 'admin' ? [{ value: 'announcements', label: 'Announcements', description: 'Important administrative notes' }] : [])
+  ]
+
+  const handleFilesChange = (newFiles: File[]) => {
+    setFiles(newFiles)
+  }
+
+  const uploadFiles = async () => {
+    if (files.length === 0) return []
+
+    setIsUploading(true)
+    try {
+      const formData = new FormData()
+      files.forEach(file => {
+        formData.append('files', file)
+      })
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Upload failed')
+      }
+
+      const result = await response.json()
+      return result.files
+    } catch (error) {
+      console.error('Upload error:', error)
+      throw error
+    } finally {
+      setIsUploading(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,24 +202,36 @@ function TeachersThreadComposer({
     setError(null)
     setIsPending(false)
 
-    const result = await onSubmit({
-      title: title.trim(),
-      body: body.trim(),
-      isAnonymous,
-      visibility: "teachers_only",
-    })
+    try {
+      // Upload files first if any
+      const uploadedFiles = await uploadFiles()
 
-    if (result.success) {
-      if (result.pending) {
-        setIsPending(true)
-      } else {
-        // Reset form on successful submission
-        setTitle("")
-        setBody("")
-        setIsAnonymous(false)
+      const result = await onSubmit({
+        title: title.trim(),
+        body: body.trim(),
+        isAnonymous,
+        visibility: "teachers_only",
+        category,
+        attachments: uploadedFiles
+      })
+
+      if (result.success) {
+        if (result.pending) {
+          setIsPending(true)
+        } else {
+          // Reset form on successful submission
+          setTitle("")
+          setBody("")
+          setIsAnonymous(false)
+          setCategory('collaboration')
+          setFiles([])
+          setAttachments([])
+        }
+      } else if (result.error) {
+        setError(result.error)
       }
-    } else if (result.error) {
-      setError(result.error)
+    } catch (uploadError: any) {
+      setError(uploadError.message || 'Failed to upload files')
     }
   }
 
@@ -185,6 +253,9 @@ function TeachersThreadComposer({
               setTitle("")
               setBody("")
               setIsAnonymous(false)
+              setCategory('collaboration')
+              setFiles([])
+              setAttachments([])
             }}
             className="bg-white"
           >
@@ -198,6 +269,26 @@ function TeachersThreadComposer({
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Category Selection */}
+        <div className="space-y-2">
+          <label htmlFor="category" className="text-sm font-medium">
+            Category <span className="text-destructive">*</span>
+          </label>
+          <select
+            id="category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring"
+            required
+          >
+            {categories.map((cat) => (
+              <option key={cat.value} value={cat.value}>
+                {cat.label} - {cat.description}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Title */}
         <div className="space-y-2">
           <label htmlFor="title" className="text-sm font-medium">
@@ -217,17 +308,23 @@ function TeachersThreadComposer({
 
         {/* Body */}
         <div className="space-y-2">
-          <label htmlFor="body" className="text-sm font-medium">
+          <label className="text-sm font-medium">
             Description <span className="text-destructive">*</span>
           </label>
-          <textarea
-            id="body"
-            placeholder="Share your professional insights, pedagogical questions, or academic concerns with fellow educators..."
+          <RichTextEditor
             value={body}
-            onChange={(e) => setBody(e.target.value)}
-            rows={6}
-            className="w-full px-3 py-2 border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring resize-none"
-            required
+            onChange={setBody}
+            placeholder="Share your professional insights, pedagogical questions, or academic concerns with fellow educators..."
+            disabled={isLoading || isUploading}
+            rows={8}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">File Attachments</label>
+          <FileUpload 
+            onFilesChange={handleFilesChange}
+            disabled={isLoading || isUploading}
           />
         </div>
 
@@ -263,10 +360,10 @@ function TeachersThreadComposer({
         <div className="flex justify-end">
           <Button
             type="submit"
-            disabled={!title.trim() || !body.trim() || isLoading}
+            disabled={!title.trim() || !body.trim() || isLoading || isUploading}
             className="bg-[#10316B] hover:bg-[#10316B]/90"
           >
-            {isLoading ? "Submitting..." : "Submit Faculty Inquiry"}
+            {isUploading ? "Uploading files..." : isLoading ? "Submitting..." : "Submit Faculty Inquiry"}
           </Button>
         </div>
       </form>

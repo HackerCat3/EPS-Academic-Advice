@@ -14,6 +14,16 @@ export async function createReply(threadId: string, formData: FormData) {
   
   const body = formData.get("body") as string
   const isAnonymous = formData.get("is_anonymous") === "true"
+  const attachmentsString = formData.get("attachments") as string
+  let attachments = []
+  
+  if (attachmentsString) {
+    try {
+      attachments = JSON.parse(attachmentsString)
+    } catch (error) {
+      console.error("Failed to parse attachments:", error)
+    }
+  }
   
   if (!body?.trim()) {
     throw new Error("Reply body is required")
@@ -25,7 +35,8 @@ export async function createReply(threadId: string, formData: FormData) {
       thread_id: threadId,
       author_id: user.id,
       body: body.trim(),
-      is_anonymous: isAnonymous
+      is_anonymous: isAnonymous,
+      attachments: attachments
     })
   
   if (error) {

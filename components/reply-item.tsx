@@ -1,7 +1,9 @@
 "use client"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Trash2 } from "lucide-react"
+import { FileAttachmentsDisplay } from "@/components/file-attachments-display"
+import { ReactionButtons } from "@/components/reaction-buttons"
+import { Trash2 } from 'lucide-react'
 import { formatDistanceToNow } from "date-fns"
 
 interface ReplyItemProps {
@@ -10,15 +12,26 @@ interface ReplyItemProps {
     body: string
     is_anonymous: boolean
     created_at: string
+    attachments?: any[]
     author?: {
       full_name: string
     }
   }
   currentUserRole?: string
   onDelete?: (replyId: string) => void
+  reactions?: any[]
+  currentUserId?: string
+  showReactions?: boolean
 }
 
-export function ReplyItem({ reply, currentUserRole, onDelete }: ReplyItemProps) {
+export function ReplyItem({ 
+  reply, 
+  currentUserRole, 
+  onDelete, 
+  reactions = [], 
+  currentUserId, 
+  showReactions = false 
+}: ReplyItemProps) {
   const canModerate = currentUserRole === "teacher" || currentUserRole === "admin"
   const authorName = reply.is_anonymous ? "Anonymous" : reply.author?.full_name || "Unknown"
 
@@ -35,6 +48,22 @@ export function ReplyItem({ reply, currentUserRole, onDelete }: ReplyItemProps) 
             <div className="prose prose-sm max-w-none">
               <p className="text-sm leading-relaxed whitespace-pre-wrap">{reply.body}</p>
             </div>
+            {reply.attachments && reply.attachments.length > 0 && (
+              <div className="mt-3 pt-3 border-t">
+                <FileAttachmentsDisplay attachments={reply.attachments} />
+              </div>
+            )}
+            {showReactions && (
+              <div className="mt-3 pt-3 border-t">
+                <ReactionButtons
+                  targetType="reply"
+                  targetId={reply.id}
+                  reactions={reactions}
+                  currentUserId={currentUserId}
+                  userRole={currentUserRole}
+                />
+              </div>
+            )}
           </div>
           {canModerate && (
             <Button

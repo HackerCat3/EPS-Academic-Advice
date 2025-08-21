@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { title, body: threadBody, isAnonymous, visibility } = body
+    const { title, body: threadBody, isAnonymous, visibility, category, attachments } = body
 
     // Validate input
     if (!title?.trim() || !threadBody?.trim()) {
@@ -54,6 +54,8 @@ export async function POST(request: NextRequest) {
         is_anonymous: isAnonymous || false,
         visibility: visibility || "public",
         is_pending: isPending,
+        category: category || "collaboration",
+        attachments: attachments || [],
       })
       .select()
       .single()

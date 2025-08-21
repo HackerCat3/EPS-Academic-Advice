@@ -22,7 +22,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json()
-    const { body: replyBody, is_anonymous } = body
+    const { body: replyBody, is_anonymous, attachments } = body
 
     // Validate input
     if (!replyBody?.trim()) {
@@ -53,6 +53,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         body: replyBody.trim(),
         is_anonymous: is_anonymous || false,
         is_pending: isPending,
+        attachments: attachments || [],
       })
       .select()
       .single()

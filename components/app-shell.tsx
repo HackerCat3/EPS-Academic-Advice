@@ -4,6 +4,7 @@ import type React from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
 import { SearchBar } from "@/components/search-bar"
+import { NotificationsDropdown } from "@/components/notifications-dropdown"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ interface AppShellProps {
     email: string
     full_name: string
     role: string
+    id: string
   }
   onSearch?: (query: string) => void
 }
@@ -98,6 +100,9 @@ export function AppShell({ children, user, onSearch }: AppShellProps) {
               <div className="hidden sm:block">
                 <SearchBar placeholder="Search discussions..." className="w-64" onSearch={onSearch} />
               </div>
+
+              {/* Notifications Dropdown */}
+              {user && (user.role === "teacher" || user.role === "admin") && <NotificationsDropdown userId={user.id} />}
 
               {/* User Menu */}
               {user && (

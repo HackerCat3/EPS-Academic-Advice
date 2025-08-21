@@ -6,6 +6,8 @@ import { ReplyForm } from "@/components/reply-form"
 import { Banner } from "@/components/banner"
 import { VisibilityBadge } from "@/components/visibility-badge"
 import { AnonBadge } from "@/components/anon-badge"
+import { FileAttachmentsDisplay } from "@/components/file-attachments-display"
+import { ReactionButtons } from "@/components/reaction-buttons"
 import { formatDistanceToNow } from "date-fns"
 import { ThreadActions } from "@/components/thread-actions"
 import { createReply } from "@/app/actions/reply-actions"
@@ -55,6 +57,12 @@ export default async function ThreadDetailPage({ params }: PageProps) {
     redirect("/")
   }
 
+  const { data: threadReactions } = await supabase
+    .from("reactions")
+    .select("*")
+    .eq("target_type", "thread")
+    .eq("target_id", id)
+
   // Get replies with author info
   const { data: replies } = await supabase
     .from("replies")
@@ -68,7 +76,24 @@ export default async function ThreadDetailPage({ params }: PageProps) {
     .eq("is_pending", false)
     .order("created_at", { ascending: true })
 
+  const replyIds = replies?.map(r => r.id) || []
+  const { data: replyReactions } = await supabase
+    .from("reactions")
+    .select("*")
+    .eq("target_type", "reply")
+    .in("target_id", replyIds)
+
   const authorName = thread.is_anonymous ? "Anonymous" : thread.author?.full_name || "Unknown"
+
+  const getCategoryLabel = (category?: string) => {
+    const categoryLabels: Record<string, string> = {
+      'collaboration': 'Academic Collaboration',
+      'review': 'Student Questions Review',
+      'policy': 'Policy Discussions',
+      'announcements': 'Announcements'
+    }
+    return categoryLabels[category || 'collaboration'] || 'Discussion'
+  }
 
   return (
     <AppShell user={profile}>
@@ -98,6 +123,12 @@ export default async function ThreadDetailPage({ params }: PageProps) {
                   <span>by {authorName}</span>
                   <span>•</span>
                   <span>{formatDistanceToNow(new Date(thread.created_at), { addSuffix: true })}</span>
+                  {thread.visibility === "teachers_only" && thread.category && (
+                    <>
+                      <span>•</span>
+                      <span className="text-xs">{getCategoryLabel(thread.category)}</span>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -111,8 +142,30 @@ export default async function ThreadDetailPage({ params }: PageProps) {
               <p className="text-base leading-relaxed whitespace-pre-wrap">{thread.body}</p>
             </div>
 
-            {/* Actions */}
-            <ThreadActions thread={thread} currentUserRole={profile.role} />
+            {thread.attachments && thread.attachments.length > 0 && (
+              <div className="border-t pt-4">
+                <FileAttachmentsDisplay attachments={thread.attachments} />
+              </div>
+            )}
+
+            {thread.visibility === "teachers_only" && (
+              <div className="flex items-center justify-between pt-4 border-t">
+                <ReactionButtons
+                  targetType="thread"
+                  targetId={thread.id}
+                  reactions={threadReactions || []}
+                  currentUserId={user.id}
+                  userRole={profile.role}
+                  disabled={thread.status === "locked"}
+                />
+                <ThreadActions thread={thread} currentUserRole={profile.role} />
+              </div>
+            )}
+
+            {/* Actions for non-teachers lounge threads */}
+            {thread.visibility !== "teachers_only" && (
+              <ThreadActions thread={thread} currentUserRole={profile.role} />
+            )}
           </div>
         </div>
 
@@ -122,9 +175,20 @@ export default async function ThreadDetailPage({ params }: PageProps) {
 
           {replies && replies.length > 0 ? (
             <div className="space-y-4">
-              {replies.map((reply) => (
-                <ReplyItem key={reply.id} reply={reply} currentUserRole={profile.role} />
-              ))}
+              {replies.map((reply) => {
+                const replyReactionsForItem = replyReactions?.filter(r => r.target_id === reply.id) || []
+                
+                return (
+                  <ReplyItem 
+                    key={reply.id} 
+                    reply={reply} 
+                    currentUserRole={profile.role}
+                    reactions={replyReactionsForItem}
+                    currentUserId={user.id}
+                    showReactions={thread.visibility === "teachers_only"}
+                  />
+                )
+              })}
             </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
@@ -140,6 +204,7 @@ export default async function ThreadDetailPage({ params }: PageProps) {
             await createReply(id, formData)
           }}
           disabled={thread.status === "locked"}
+          allowAttachments={["teacher", "admin"].includes(profile.role)}
         />
       </div>
     </AppShell>
