@@ -1,15 +1,14 @@
-"use client"
-
 import { redirect } from "next/navigation"
 import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/app-shell"
 import { ReplyItem } from "@/components/reply-item"
-import { ReplyComposer } from "@/components/reply-composer"
+import { ReplyForm } from "@/components/reply-form"
 import { Banner } from "@/components/banner"
 import { VisibilityBadge } from "@/components/visibility-badge"
 import { AnonBadge } from "@/components/anon-badge"
 import { formatDistanceToNow } from "date-fns"
 import { ThreadActions } from "@/components/thread-actions"
+import { createReply } from "@/app/actions/reply-actions"
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -134,23 +133,11 @@ export default async function ThreadDetailPage({ params }: PageProps) {
           )}
         </div>
 
-        {/* Reply Composer */}
-        <ReplyComposer
-          onSubmit={async (body: string, isAnonymous: boolean) => {
-            const response = await fetch(`/api/threads/${id}/replies`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ body, is_anonymous: isAnonymous }),
-            })
-
-            if (!response.ok) {
-              throw new Error("Failed to post reply")
-            }
-
-            // Refresh the page to show the new reply
-            window.location.reload()
+        {/* Reply Form */}
+        <ReplyForm
+          action={async (formData: FormData) => {
+            "use server"
+            await createReply(id, formData)
           }}
           disabled={thread.status === "locked"}
         />
