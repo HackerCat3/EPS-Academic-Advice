@@ -22,9 +22,12 @@ export function ReplyForm({ action, disabled, allowAttachments = false }: ReplyF
     event.preventDefault()
     if (disabled || isSubmitting || !body.trim()) return
     
+    // Store form reference before async operations
+    const form = event.currentTarget
+    
     setIsSubmitting(true)
     try {
-      const formData = new FormData(event.currentTarget)
+      const formData = new FormData(form)
       formData.set('body', body)
       
       if (allowAttachments && files.length > 0) {
@@ -48,9 +51,10 @@ export function ReplyForm({ action, disabled, allowAttachments = false }: ReplyF
       setFiles([]) // Clear files after successful submission
       setBody("") // Clear rich text editor
       
-      // Reset form
-      const form = event.currentTarget
-      form.reset()
+      // Reset form with null check
+      if (form) {
+        form.reset()
+      }
     } catch (error) {
       console.error('Reply submission error:', error)
     } finally {
