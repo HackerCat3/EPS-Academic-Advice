@@ -75,7 +75,7 @@ export function AppShell({ children, user, onSearch }: AppShellProps) {
                         }`}
                       >
                         <GraduationCap className="h-4 w-4" />
-                        Teachers' Lounge
+                        Teachers&apos; Lounge
                       </Link>
                       <Link
                         href="/moderation"
@@ -123,7 +123,7 @@ export function AppShell({ children, user, onSearch }: AppShellProps) {
                     {(user.role === "teacher" || user.role === "admin") && (
                       <>
                         <DropdownMenuItem asChild>
-                          <Link href="/teachers">Teachers' Lounge</Link>
+                          <Link href="/teachers">Teachers&apos; Lounge</Link>
                         </DropdownMenuItem>
                         <DropdownMenuItem asChild>
                           <Link href="/moderation">Moderation</Link>

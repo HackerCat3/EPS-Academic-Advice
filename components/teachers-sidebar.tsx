@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { MessageSquare, Users, FileText, Megaphone, Shield, Clock, Plus } from "lucide-react"
 import Link from "next/link"
-import { usePathname, useSearchParams } from "next/navigation"
+import { useSearchParams } from "next/navigation"
 
 interface CategoryCount {
   category: string
@@ -18,8 +18,7 @@ interface TeachersSidebarProps {
   userRole: string
 }
 
-export function TeachersSidebar({ categoryCounts, pendingCount, userRole }: TeachersSidebarProps) {
-  const pathname = usePathname()
+export function TeachersSidebar({ categoryCounts, pendingCount }: TeachersSidebarProps) {
   const searchParams = useSearchParams()
   const currentCategory = searchParams.get("category")
 

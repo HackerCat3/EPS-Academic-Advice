@@ -18,7 +18,6 @@ export function ThreadActions({ thread, currentUserRole }: ThreadActionsProps) {
   const [showLockDialog, setShowLockDialog] = useState(false)
   const [showUnlockDialog, setShowUnlockDialog] = useState(false)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
   const canModerate = currentUserRole === "teacher" || currentUserRole === "admin"

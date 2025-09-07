@@ -44,7 +44,7 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
     .eq("visibility", "teachers_only")
     .eq("is_pending", false)
 
-  const categoryCountsFormatted = categoryCounts?.reduce((acc: any[], thread) => {
+  const categoryCountsFormatted = categoryCounts?.reduce((acc: Array<{category: string, count: number}>, thread) => {
     const existing = acc.find(c => c.category === thread.category)
     if (existing) {
       existing.count++
@@ -116,7 +116,7 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
         {/* Teachers' Lounge Banner */}
         <Banner variant="teachers">
           <div className="flex items-center justify-center">
-            <span className="font-serif text-xl">Teachers' Lounge</span>
+            <span className="font-serif text-xl">Teachers&apos; Lounge</span>
           </div>
         </Banner>
 
@@ -167,7 +167,7 @@ export default async function TeachersLoungePage({ searchParams }: PageProps) {
                     ? `No faculty discussions match your search for "${searchQuery}". Try different keywords or browse all discussions.`
                     : isFiltering
                       ? `No discussions have been started in ${getCategoryDisplayName(category!).toLowerCase()} yet.`
-                      : "No threads have been initiated in the Teachers' Lounge."
+                      : "No threads have been initiated in the Teachers&apos; Lounge."
                 }
                 actionLabel={isSearching ? undefined : "Submit an Academic Inquiry"}
                 actionHref={isSearching ? undefined : "/teachers/threads/new"}

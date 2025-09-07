@@ -3,6 +3,27 @@ import { createClient } from "@/lib/supabase/server"
 import { AppShell } from "@/components/app-shell"
 import { ModerationDashboard } from "@/components/moderation-dashboard"
 
+interface PendingItem {
+  id: string
+  type: 'thread' | 'reply'
+  title?: string
+  body: string
+  author: { full_name: string; email: string } | null
+  created_at: string
+  flag_reason?: string
+  thread_title?: string
+}
+
+interface ModerationEvent {
+  id: string
+  action: string
+  target_type: string
+  target_id: string
+  reason?: string
+  created_at: string
+  actor: { full_name: string } | null
+}
+
 export default async function ModerationPage() {
   const supabase = await createClient()
 
@@ -103,7 +124,6 @@ export default async function ModerationPage() {
       <ModerationDashboardClient
         pendingItems={pendingItems}
         moderationEvents={moderationEvents || []}
-        currentUserId={user.id}
       />
     </AppShell>
   )
@@ -113,11 +133,9 @@ export default async function ModerationPage() {
 function ModerationDashboardClient({
   pendingItems,
   moderationEvents,
-  currentUserId,
 }: {
-  pendingItems: any[]
-  moderationEvents: any[]
-  currentUserId: string
+  pendingItems: PendingItem[]
+  moderationEvents: ModerationEvent[]
 }) {
   const handleApprove = async (targetType: string, targetId: string) => {
     const response = await fetch("/api/moderation/approve", {

@@ -7,8 +7,7 @@ import { useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function NewThreadPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<{id: string, role: string, full_name: string} | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
 
@@ -31,7 +30,6 @@ export default function NewThreadPage() {
         return
       }
 
-      setUser(user)
       setProfile(profile)
     }
 
@@ -67,7 +65,7 @@ export default function NewThreadPage() {
       } else {
         return { success: false, error: result.error || "Failed to create thread" }
       }
-    } catch (error) {
+    } catch {
       return { success: false, error: "An unexpected error occurred" }
     } finally {
       setIsLoading(false)

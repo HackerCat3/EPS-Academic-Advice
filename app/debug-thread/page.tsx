@@ -5,10 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 export default function DebugThreadPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [authorized, setAuthorized] = useState(false)
+  const [result, setResult] = useState<Record<string, unknown> | null>(null)
+  const [testing, setTesting] = useState(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -38,8 +38,6 @@ export default function DebugThreadPage() {
         return
       }
 
-      setUser(user)
-      setProfile(profile)
       setAuthorized(true)
       setLoading(false)
     }
@@ -59,8 +57,6 @@ export default function DebugThreadPage() {
       </div>
     )
   }
-  const [result, setResult] = useState<any>(null)
-  const [testing, setTesting] = useState(false)
 
   const runDebug = async () => {
     setTesting(true)
@@ -74,7 +70,7 @@ export default function DebugThreadPage() {
       const data = await response.json()
       setResult({ status: response.status, data })
     } catch (error) {
-      setResult({ error: error.message })
+      setResult({ error: error instanceof Error ? error.message : 'Unknown error' })
     } finally {
       setTesting(false)
     }

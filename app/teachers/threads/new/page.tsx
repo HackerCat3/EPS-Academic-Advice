@@ -11,8 +11,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState } from "react"
 
 export default function NewTeachersThreadPage() {
-  const [user, setUser] = useState<any>(null)
-  const [profile, setProfile] = useState<any>(null)
+  const [profile, setProfile] = useState<{id: string, role: string, full_name: string} | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -47,7 +46,6 @@ export default function NewTeachersThreadPage() {
         return
       }
 
-      setUser(user)
       setProfile(profile)
     }
 
@@ -60,7 +58,7 @@ export default function NewTeachersThreadPage() {
     isAnonymous: boolean
     visibility: "public" | "teachers_only"
     category: string
-    attachments: any[]
+    attachments: Array<{name: string, url: string, type: string}>
   }) => {
     setIsLoading(true)
 
@@ -89,7 +87,7 @@ export default function NewTeachersThreadPage() {
       } else {
         return { success: false, error: result.error || "Failed to create thread" }
       }
-    } catch (error) {
+    } catch {
       return { success: false, error: "An unexpected error occurred" }
     } finally {
       setIsLoading(false)
@@ -106,7 +104,7 @@ export default function NewTeachersThreadPage() {
         {/* Teachers' Lounge Banner */}
         <Banner variant="teachers">
           <div className="flex items-center justify-center">
-            <span className="font-serif text-xl">Teachers' Lounge</span>
+            <span className="font-serif text-xl">Teachers&apos; Lounge</span>
           </div>
         </Banner>
 
@@ -142,7 +140,7 @@ function TeachersThreadComposer({
     isAnonymous: boolean
     visibility: "public" | "teachers_only"
     category: string
-    attachments: any[]
+    attachments: Array<{name: string, url: string, type: string}>
   }) => Promise<{ success: boolean; pending?: boolean; error?: string }>
   isLoading?: boolean
   userRole?: string
@@ -152,7 +150,7 @@ function TeachersThreadComposer({
   const [body, setBody] = useState("")
   const [isAnonymous, setIsAnonymous] = useState(false)
   const [category, setCategory] = useState(defaultCategory)
-  const [attachments, setAttachments] = useState<any[]>([])
+  const [attachments, setAttachments] = useState<Array<{name: string, url: string, type: string}>>([])
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const [isPending, setIsPending] = useState(false)
@@ -234,8 +232,8 @@ function TeachersThreadComposer({
       } else if (result.error) {
         setError(result.error)
       }
-    } catch (uploadError: any) {
-      setError(uploadError.message || 'Failed to upload files')
+    } catch (uploadError: unknown) {
+      setError(uploadError instanceof Error ? uploadError.message : 'Failed to upload files')
     }
   }
 

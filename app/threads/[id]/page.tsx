@@ -102,7 +102,7 @@ export default async function ThreadDetailPage({ params }: PageProps) {
         {thread.visibility === "teachers_only" && (
           <Banner variant="teachers">
             <div className="flex items-center justify-center">
-              <span className="font-serif text-lg">Teachers' Lounge</span>
+              <span className="font-serif text-lg">Teachers&apos; Lounge</span>
             </div>
           </Banner>
         )}

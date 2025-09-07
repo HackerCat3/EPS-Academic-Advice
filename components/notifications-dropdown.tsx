@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Bell, Check, AlertTriangle, MessageSquare, Megaphone } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,9 +33,9 @@ export function NotificationsDropdown({ userId }: NotificationsDropdownProps) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     try {
       const response = await fetch("/api/notifications")
       if (response.ok) {
@@ -48,7 +48,7 @@ export function NotificationsDropdown({ userId }: NotificationsDropdownProps) {
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
   const markAsRead = async (notificationId: string) => {
     try {
@@ -102,7 +102,7 @@ export function NotificationsDropdown({ userId }: NotificationsDropdownProps) {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [userId])
+  }, [userId, supabase, fetchNotifications])
 
   return (
     <DropdownMenu>

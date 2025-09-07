@@ -12,14 +12,14 @@ interface ReplyItemProps {
     body: string
     is_anonymous: boolean
     created_at: string
-    attachments?: any[]
+    attachments?: Array<{name: string, url: string, type: string}>
     author?: {
       full_name: string
     }
   }
   currentUserRole?: string
   onDelete?: (replyId: string) => void
-  reactions?: any[]
+  reactions?: Array<{id: string, user_id: string, reaction_type: 'approve' | 'disagree' | 'concern'}>
   currentUserId?: string
   showReactions?: boolean
 }

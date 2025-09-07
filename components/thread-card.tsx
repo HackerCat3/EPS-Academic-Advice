@@ -16,7 +16,7 @@ interface ThreadCardProps {
     status: "open" | "locked"
     created_at: string
     category?: string
-    attachments?: any[]
+    attachments?: Array<{name: string, url: string, type: string}>
     author?: {
       full_name: string
     }

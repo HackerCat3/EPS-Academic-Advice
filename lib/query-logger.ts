@@ -3,25 +3,26 @@
  * Intercepts Supabase queries and logs them to console
  */
 
-export function logQuery(tableName: string, operation: string, query: any) {
+export function logQuery(tableName: string, operation: string, query: unknown) {
   if (process.env.NODE_ENV !== 'development') return query
 
-  const originalThen = query.then
-  if (originalThen) {
-    query.then = function(onResolve: any, onReject?: any) {
+  const queryObject = query as Record<string, unknown>
+  const originalThen = queryObject.then as ((onResolve: (result: unknown) => unknown, onReject?: (error: unknown) => unknown) => unknown) | undefined
+  if (originalThen && typeof originalThen === 'function') {
+    queryObject.then = function(onResolve: (result: unknown) => unknown, onReject?: (error: unknown) => unknown) {
       console.log(`🔍 [SUPABASE QUERY] ${operation.toUpperCase()} on table: ${tableName}`)
       
       // Try to extract query details
-      if (query.url) {
-        console.log(`   URL: ${query.url}`)
+      if (queryObject.url) {
+        console.log(`   URL: ${queryObject.url}`)
       }
       
       return originalThen.call(this, 
-        (result: any) => {
+        (result: unknown) => {
           console.log(`✅ [SUPABASE SUCCESS] ${operation.toUpperCase()} ${tableName}:`, result)
           return onResolve ? onResolve(result) : result
         },
-        (error: any) => {
+        (error: unknown) => {
           console.error(`❌ [SUPABASE ERROR] ${operation.toUpperCase()} ${tableName}:`, error)
           return onReject ? onReject(error) : Promise.reject(error)
         }
