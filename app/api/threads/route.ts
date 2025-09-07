@@ -1,5 +1,6 @@
-import { createClient } from "@/lib/supabase/server"
 import { offTopicCheck } from "@/lib/off-topic-check"
+import { logQuery, logQueryResult } from "@/lib/supabase-debug"
+import { createClient } from "@/lib/supabase/server"
 import { type NextRequest, NextResponse } from "next/server"
 
 export async function POST(request: NextRequest) {
@@ -35,6 +36,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "The submitted data is incomplete or invalid." }, { status: 400 })
     }
 
+    // Validate category against database constraints
+    const validCategories = ['collaboration', 'review', 'policy', 'announcements']
+    const validatedCategory = validCategories.includes(category) ? category : 'collaboration'
+    
+    // Debug logging for category validation
+    if (process.env.NODE_ENV === 'development') {
+      console.log('🔍 [CATEGORY DEBUG]')
+      console.log('   Raw category from request:', category)
+      console.log('   Valid categories:', validCategories)
+      console.log('   Is category valid?:', validCategories.includes(category))
+      console.log('   Final validated category:', validatedCategory)
+    }
+
     // Check if user can create teachers_only threads
     if (visibility === "teachers_only" && !["teacher", "admin"].includes(profile.role)) {
       return NextResponse.json({ error: "You lack the authorization to perform this action." }, { status: 403 })
@@ -44,21 +58,32 @@ export async function POST(request: NextRequest) {
     const offTopicResult = offTopicCheck(title + " " + threadBody)
     const isPending = offTopicResult.outcome === "block"
 
+    // Prepare thread data
+    const threadData = {
+      author_id: user.id,
+      title: title.trim(),
+      body: threadBody.trim(),
+      is_anonymous: isAnonymous || false,
+      visibility: visibility || "public",
+      is_pending: isPending,
+      category: validatedCategory,
+      attachments: attachments || [],
+    }
+
+    // Log the query before execution
+    console.log("🔍 [THREAD DATA]")
+    console.log("   Thread data:", threadData)
+    logQuery("insert", "threads", threadData)
+
     // Create thread
     const { data: thread, error: threadError } = await supabase
       .from("threads")
-      .insert({
-        author_id: user.id,
-        title: title.trim(),
-        body: threadBody.trim(),
-        is_anonymous: isAnonymous || false,
-        visibility: visibility || "public",
-        is_pending: isPending,
-        category: category || "collaboration",
-        attachments: attachments || [],
-      })
+      .insert(threadData)
       .select()
       .single()
+
+    // Log the result
+    logQueryResult("insert", "threads", { data: thread, error: threadError })
 
     if (threadError) {
       console.error("Thread creation error:", threadError)

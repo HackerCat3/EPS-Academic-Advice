@@ -9,10 +9,14 @@ EPS Academic Advice is a Next.js 15 academic Q&A platform for Eastside Prep stud
 ## Development Commands
 
 ### Core Development
-- `npm run dev` - Start development server with Turbopack
+- `npm run dev` - Start development server with Turbopack. Use `NODE_ENV=development npm run dev` for logging on terminal
 - `npm run build` - Build production application
 - `npm run start` - Start production server
 - `npm run lint` - Run ESLint (note: errors ignored during builds)
+
+### Debug Tools
+- `/debug-thread` - Admin-only debug page for testing thread creation and RLS policies
+- `/api/debug-thread` - API endpoint for testing authentication and database operations
 
 ### Database Management
 SQL scripts are located in `/scripts/` directory:
@@ -37,10 +41,12 @@ Execute these scripts in Supabase SQL editor in order.
 \`\`\`
 /app/                    # Next.js 15 App Router pages
 ├── api/                 # API routes for backend operations
+│   ├── debug-thread/    # Debug endpoint for testing RLS policies
 │   ├── moderation/      # Content moderation endpoints
 │   ├── search/          # Full-text search API
 │   └── threads/         # Thread CRUD operations
 ├── auth/                # Authentication pages
+├── debug-thread/        # Admin-only debug page for testing
 ├── moderation/          # Moderation dashboard (teachers/admin only)
 ├── teachers/            # Teachers-only area
 └── threads/             # Thread creation and viewing

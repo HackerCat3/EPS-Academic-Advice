@@ -16,7 +16,11 @@ export default function NewTeachersThreadPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const defaultCategory = searchParams.get('category') || 'collaboration'
+  
+  // Validate category parameter to ensure it matches database constraints
+  const rawCategory = searchParams.get('category')
+  const validCategories = ['collaboration', 'review', 'policy', 'announcements']
+  const defaultCategory = validCategories.includes(rawCategory || '') ? (rawCategory || 'collaboration') : 'collaboration'
 
   useEffect(() => {
     const getUser = async () => {
